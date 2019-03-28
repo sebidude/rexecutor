@@ -1,0 +1,15 @@
+listenAddress: "0.0.0.0:8989"
+commands:
+  full: 
+    command: echo
+    args: 
+      - echo-test
+      - echo
+      - echo 
+      - test
+
+  run: 
+    command: /home/bastians/repos/go/src/local/stdout/stdout
+    args: []
+#      - -c
+#      - "for i in {0..1000}; do echo -n \"$i \"; [[ $(($i%10)) -eq 0 ]] && { echo; sleep 0.01; } ; done"
