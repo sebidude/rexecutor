@@ -59,7 +59,12 @@ func main() {
 	router.Use(gin.Recovery())
 	router.Use(GinLogger())
 	router.GET("/cmd/:cmd", rce.runCommand)
-	router.Run(rce.Config.ListenAddress)
+	err = router.Run(rce.Config.ListenAddress)
+	if err != nil {
+		log.Fatalln(err.Error())
+	}
+	log.Println("Shutdown.")
+	os.Exit(0)
 
 }
 
