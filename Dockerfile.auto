@@ -1,0 +1,17 @@
+
+FROM golang:1.14-alpine as builder
+
+RUN apk add --no-cache --update git make ca-certificates
+RUN mkdir /build
+WORKDIR /build
+RUN git clone https://github.com/sebidude/rexecutor.git
+WORKDIR /build/rexecutor
+RUN make build-linux
+
+FROM scratch
+
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=builder /build/rexecutor/build/linux/rexecutor /usr/bin/rexecutor
+COPY config.yaml /config.yaml
+ENTRYPOINT ["/usr/bin/rexecutor"]
+CMD ["-c","/config.yaml"]

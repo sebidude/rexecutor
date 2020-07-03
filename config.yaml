@@ -1,15 +1,18 @@
 listenAddress: "0.0.0.0:8989"
-commands:
-  full: 
+endpoints:
+  - path: /fullBackup
     command: echo
+    args:
+    - hello
+    - world
+  - path: /sleep
+    allowMulti: true
+    command: /bin/sh
     args: 
-      - echo-test
-      - echo
-      - echo 
-      - test
-
-  run: 
-    command: /home/bastians/repos/go/src/local/stdout/stdout
-    args: []
-#      - -c
-#      - "for i in {0..1000}; do echo -n \"$i \"; [[ $(($i%10)) -eq 0 ]] && { echo; sleep 0.01; } ; done"
+    - -c
+    - "for i in {1..60};do echo hello $(date);sleep 1;done"
+  - path: /quick
+    command: /bin/sh
+    args: 
+    - -c
+    - "for i in {1..30};do echo hello $(date);sleep 0.2;done"
