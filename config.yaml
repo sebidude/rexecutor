@@ -5,6 +5,7 @@ endpoints:
     args:
     - hello
     - world
+    - -lala
   - path: /sleep
     allowMulti: true
     command: /bin/sh

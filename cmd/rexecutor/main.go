@@ -18,13 +18,13 @@ import (
 )
 
 type Job struct {
-	JobID      string         `json:"jobID" yaml:"jobID"`
-	Endpoint   EndpointConfig `json:"endpoint" yaml:"endpoint"`
-	ExitCode   int            `json:"exitCode" yaml:"exitCode"`
-	Running    bool           `json:"running" yaml:"running"`
-	OutputPipe bytes.Buffer   `json:"-"`
-	Output     string         `json:"output" yaml:"output"`
-	Pid        int            `json:"pid" yaml:"pid"`
+	JobID      string          `json:"jobID" yaml:"jobID"`
+	Endpoint   *EndpointConfig `json:"endpoint" yaml:"endpoint"`
+	ExitCode   int             `json:"exitCode" yaml:"exitCode"`
+	Running    bool            `json:"running" yaml:"running"`
+	OutputPipe bytes.Buffer    `json:"-"`
+	Output     string          `json:"output" yaml:"output"`
+	Pid        int             `json:"pid" yaml:"pid"`
 }
 
 type Jobs map[string]*Job
@@ -37,12 +37,13 @@ type EndpointConfig struct {
 }
 
 type Configuration struct {
-	ListenAddress string           `json:"listenAddress" yaml:"listenAddress"`
-	Endpoints     []EndpointConfig `json:"endpoints" yaml:"endpoints"`
+	ListenAddress string            `json:"listenAddress" yaml:"listenAddress"`
+	Endpoints     []*EndpointConfig `json:"endpoints" yaml:"endpoints"`
 }
 
 type Rexecutor struct {
 	Config   *Configuration
+	Router   *gin.Engine
 	Jobs     Jobs
 	JobsDone chan string
 }
@@ -86,20 +87,21 @@ func main() {
 	rce.Jobs = make(Jobs)
 
 	gin.SetMode(gin.ReleaseMode)
-	router := gin.New()
-	router.Use(gin.Recovery())
-	router.Use(GinLogger())
+	rce.Router = gin.New()
+	rce.Router.Use(gin.Recovery())
+	rce.Router.Use(GinLogger())
 	log.WithField("component", "router").Infof("setting up endpoints")
 	for _, endpoint := range rce.Config.Endpoints {
 		log.WithField("component", "router").Infof("endpoint: %#v", endpoint)
-		router.GET("/run/"+endpoint.Path, rce.runCommand(endpoint))
+		rce.Router.GET("/run/"+endpoint.Path, rce.runCommand(endpoint))
 	}
-	router.GET("/output/:jobid", rce.jobOutput)
-	router.GET("/result/:jobid", rce.jobResult)
-	router.GET("/status/:jobid", rce.jobStatus)
+	rce.Router.GET("/output/:jobid", rce.jobOutput)
+	rce.Router.GET("/result/:jobid", rce.jobResult)
+	rce.Router.GET("/status/:jobid", rce.jobStatus)
+	rce.Router.POST("/reload", rce.reload)
 	log.WithField("component", "main").Infof("Start server on %s", rce.Config.ListenAddress)
 
-	err = router.Run(rce.Config.ListenAddress)
+	err = rce.Router.Run(rce.Config.ListenAddress)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
@@ -108,7 +110,7 @@ func main() {
 
 }
 
-func (rce *Rexecutor) runCommand(endpoint EndpointConfig) gin.HandlerFunc {
+func (rce *Rexecutor) runCommand(endpoint *EndpointConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		rid := uniuri.NewLen(8)
 		c.Set("id", rid)
@@ -146,6 +148,27 @@ func (rce *Rexecutor) runCommand(endpoint EndpointConfig) gin.HandlerFunc {
 		c.String(200, "Job %s finished.\n%s", rid, job.OutputPipe.String())
 		delete(rce.Jobs, rid)
 	}
+}
+
+func (rce *Rexecutor) reload(c *gin.Context) {
+	rid := uniuri.NewLen(8)
+	c.Set("id", rid)
+	log.WithField("component", "main").Infof("Reloading configfile.")
+	err := configparser.ParseYaml(configfile, &appconfig)
+	if err != nil {
+		log.Println(configfile)
+		log.WithField("component", "main").Errorf("Failed to reload config: %s", err.Error())
+		c.AbortWithError(500, err)
+		return
+	}
+	log.WithField("component", "main").Infof("Setting config parameters from env.")
+	configparser.SetValuesFromEnvironment("RCE", &appconfig)
+	rce.Config = &appconfig
+	for _, endpoint := range rce.Config.Endpoints {
+		log.WithField("component", "router").Infof("endpoint: %#v", endpoint)
+	}
+	log.WithField("component", "main").Infof("Config reloaded successfully.")
+
 }
 
 func (rce *Rexecutor) jobResult(c *gin.Context) {
