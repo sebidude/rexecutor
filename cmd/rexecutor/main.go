@@ -93,7 +93,7 @@ func main() {
 	log.WithField("component", "router").Infof("setting up endpoints")
 	for _, endpoint := range rce.Config.Endpoints {
 		log.WithField("component", "router").Infof("endpoint: %#v", endpoint)
-		rce.Router.GET("/run/"+endpoint.Path, rce.runCommand(endpoint))
+		rce.Router.GET("/run"+endpoint.Path, rce.runCommand(endpoint))
 	}
 	rce.Router.GET("/output/:jobid", rce.jobOutput)
 	rce.Router.GET("/result/:jobid", rce.jobResult)
@@ -166,7 +166,19 @@ func (rce *Rexecutor) reload(c *gin.Context) {
 	configparser.SetValuesFromEnvironment("RCE", &appconfig)
 	rce.Config = &appconfig
 	for _, endpoint := range rce.Config.Endpoints {
-		log.WithField("component", "router").Infof("endpoint: %#v", endpoint)
+		found := false
+		for _, r := range rce.Router.Routes() {
+			if r.Path == "/run"+endpoint.Path {
+				found = true
+			}
+		}
+		if !found {
+			log.WithField("component", "router").Infof("new endpoint: %#v", endpoint)
+			rce.Router.GET("/run"+endpoint.Path, rce.runCommand(endpoint))
+		} else {
+			log.WithField("component", "router").Infof("endpoint: %#v", endpoint)
+		}
+
 	}
 	log.WithField("component", "main").Infof("Config reloaded successfully.")
 
