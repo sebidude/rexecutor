@@ -16,4 +16,4 @@ endpoints:
     command: /bin/sh
     args: 
     - -c
-    - "for i in {1..30};do echo hello $(date);sleep 0.2;done"
+    - "for i in {1..30};do [[ $(($i%5)) -eq 0 ]] && { echo error >&2 ; } || { echo hello $(date); }; sleep 0.2;done"

@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"time"
@@ -130,11 +128,11 @@ func (rce *Rexecutor) runCommand(endpoint *EndpointConfig) gin.HandlerFunc {
 
 		log.WithField("component", "runner").Infof("%s - exec: %#v", rid, endpoint)
 		cmd := exec.Command(endpoint.Command, endpoint.Args...)
-		cmdout, _ := cmd.StdoutPipe()
-		jw := bufio.NewWriter(&job.OutputPipe)
+		cmd.Stdout = &job.OutputPipe
+		cmd.Stderr = &job.OutputPipe
 		job.Running = true
 		cmd.Start()
-		io.Copy(jw, cmdout)
+
 		job.Pid = cmd.Process.Pid
 		if err := cmd.Wait(); err != nil {
 			log.WithField("component", "runner").Errorf("%s - job failed: %s", rid, err.Error())
