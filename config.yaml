@@ -17,3 +17,8 @@ endpoints:
     args: 
     - -c
     - "for i in {1..30};do [[ $(($i%5)) -eq 0 ]] && { echo error >&2 ; } || { echo hello $(date); }; sleep 0.2;done"
+  - path: /error
+    command: /bin/sh
+    args: 
+    - -c
+    - "sleep 5;"

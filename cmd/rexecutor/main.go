@@ -58,6 +58,7 @@ func main() {
 
 	log.SetFormatter(&nested.Formatter{
 		HideKeys:        true,
+		NoColors:        true,
 		FieldsOrder:     []string{"component", "category"},
 		TimestampFormat: time.RFC3339Nano,
 	})
@@ -135,7 +136,7 @@ func (rce *Rexecutor) runCommand(endpoint *EndpointConfig) gin.HandlerFunc {
 
 		job.Pid = cmd.Process.Pid
 		if err := cmd.Wait(); err != nil {
-			log.WithField("component", "runner").Errorf("%s - job failed: %s", rid, err.Error())
+			log.WithField("component", "runner").Errorf("%s - job failed: %s\n%s", rid, err.Error(), job.OutputPipe.String())
 			c.String(500, "Job %s failed: %s\n%s", rid, err.Error(), job.OutputPipe.String())
 			c.Abort()
 			delete(rce.Jobs, rid)
@@ -143,7 +144,7 @@ func (rce *Rexecutor) runCommand(endpoint *EndpointConfig) gin.HandlerFunc {
 		}
 		job.Running = false
 		job.ExitCode = cmd.ProcessState.ExitCode()
-		log.WithField("component", "runner").Infof("%s - exec: %#v", rid, endpoint)
+		log.WithField("component", "runner").Infof("Job %s finished.\n%s", rid, job.OutputPipe.String())
 		c.String(200, "Job %s finished.\n%s", rid, job.OutputPipe.String())
 		delete(rce.Jobs, rid)
 	}
