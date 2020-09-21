@@ -132,7 +132,14 @@ func (rce *Rexecutor) runCommand(endpoint *EndpointConfig) gin.HandlerFunc {
 		cmd.Stdout = &job.OutputPipe
 		cmd.Stderr = &job.OutputPipe
 		job.Running = true
-		cmd.Start()
+		err := cmd.Start()
+		if err != nil {
+			log.WithField("component", "runner").Errorf("%s - job failed: %s\n%s", rid, err.Error(), job.OutputPipe.String())
+			c.String(500, "Job %s failed: %s\n%s", rid, err.Error(), job.OutputPipe.String())
+			c.Abort()
+			delete(rce.Jobs, rid)
+			return
+		}
 
 		job.Pid = cmd.Process.Pid
 		if err := cmd.Wait(); err != nil {
